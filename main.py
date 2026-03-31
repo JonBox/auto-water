@@ -1,43 +1,40 @@
 import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-import uvicorn
+from bottle import route, static_file, Bottle
 from inputs.moisture_sensor import moisture_sensor
 from outputs.water_servo import water_servo
 from history import history
-from fastapi.responses import FileResponse
 
 
 water = water_servo()
 moisture = moisture_sensor()
 history = history()
+app = Bottle()
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan():
     asyncio.create_task(status_recorder_loop())
     yield
 
-app = FastAPI(lifespan=lifespan)
-
-@app.get("/water_on")
-async def water_on():
+@app.route('/water_on')
+def water_on():
     water.turn_on()
 
-@app.get("/water_off")
-async def water_off():
+@app.route("/water_off")
+def water_off():
     water.turn_off()
 
-@app.get("/status")
-async def status():
+@app.route("/status")
+def status():
     return {"water_on": water.is_on(), "soil_moisture": moisture.get_moisture_level()}
 
-@app.get("/status_history")
-async def status_history():
+@app.route("/status_history")
+def status_history():
     return history.read_status_from_file()
 
-@app.get("/history_chart")
-async def status_recorder():
-    return FileResponse(history.chart_data())
+@app.route("/history_chart")
+def status_recorder():
+    return static_file(history.chart_data(), root=".", mimetype="image/png")
 
 def write_status_to_file():
     (moisture_value, moisture_voltage) = moisture.get_moisture_level()
@@ -49,4 +46,4 @@ async def status_recorder_loop():
         await asyncio.sleep(60)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    app.run(host='localhost', port=8080, debug=True)

@@ -6,10 +6,9 @@ requires-python = ">=3.14"
 dependencies = [
     "adafruit-blinka>=8.70.0",
     "adafruit-circuitpython-ads1x15>=3.0.2",
-    "fastapi>=0.135.1",
+    "bottle>=0.13.4",
     "image>=1.5.33",
     "matplotlib>=3.10.8",
     "numpy>=2.4.3",
     "pyftdi>=0.57.1",
-    "uvicorn>=0.41.0",
 ]
