@@ -7,7 +7,6 @@ dependencies = [
     "adafruit-blinka>=8.70.0",
     "adafruit-circuitpython-ads1x15>=3.0.2",
     "bottle>=0.13.4",
-    "image>=1.5.33",
-    "matplotlib>=3.10.8",
+#    "image>=1.5.33",
     "pyftdi>=0.57.1",
 ]
