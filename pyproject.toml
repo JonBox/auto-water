@@ -9,6 +9,5 @@ dependencies = [
     "bottle>=0.13.4",
     "image>=1.5.33",
     "matplotlib>=3.10.8",
-    "numpy>=2.4.3",
     "pyftdi>=0.57.1",
 ]
