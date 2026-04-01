@@ -1,13 +1,16 @@
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from bottle import route, static_file, Bottle
+
+from boards.hardware_factory import get_board
 from inputs.moisture_sensor import moisture_sensor
 from outputs.water_servo import water_servo
 from history import history
 
 
-water = water_servo()
-moisture = moisture_sensor()
+water = water_servo(get_board())
+moisture = moisture_sensor(get_board())
 history = history()
 app = Bottle()
 

@@ -1,21 +1,12 @@
-#https://learn.adafruit.com/circuitpython-on-any-computer-with-ft232h/running-circuitpython-code-without-circuitpython
-#from pyftdi.ftdi import Ftdi
-#Ftdi().open_from_url('ftdi:///?')
-
-import board
-import digitalio
-
-
 class water_servo:
-    def __init__(self):
-        self.water = digitalio.DigitalInOut(board.C0)
-        self.water.direction = digitalio.Direction.OUTPUT
+    def __init__(self, board):
+        self.board = board
 
     def turn_on(self):
-        self.water.value = True
+        self.board.turn_digital_output_on()
 
     def turn_off(self):
-        self.water.value = False
+        self.board.turn_digital_output_off()
 
     def is_on(self):
-        return self.water.value
+        return self.board.digital_output_is_on()
