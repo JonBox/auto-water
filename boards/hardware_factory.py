@@ -3,7 +3,7 @@ def get_board():
     try:
         from boards.ft232 import ft232
         return ft232()
-    except ImportError:
+    except (ValueError, ImportError, Excetion) as e:
         pass
 
     try:
