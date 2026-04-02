@@ -8,6 +8,7 @@ dependencies = [
     "adafruit-circuitpython-ads1x15>=3.0.2",
     "bottle>=0.13.4",
     #    "image>=1.5.33",
+    "gpiozero>=2.0.1",
     "pyftdi>=0.57.1",
     "rpi-gpio>=0.7.1",
 ]
