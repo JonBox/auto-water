@@ -2,8 +2,8 @@ from boards.hardware import hardware
 from gpiozero import OutputDevice
 
 class raspi(hardware):
-    self.output = OutputDevice(5, active_high=False)
     def __init__(self):
+        self.output = OutputDevice(5, active_high=False)
         pass
     def get_analog_input(self):
         return None
