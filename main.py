@@ -8,9 +8,9 @@ from inputs.moisture_sensor import moisture_sensor
 from outputs.water_servo import water_servo
 from history import history
 
-
-water = water_servo(get_board())
-moisture = moisture_sensor(get_board())
+board = get_board()
+water = water_servo(board)
+moisture = moisture_sensor(board)
 history = history()
 app = Bottle()
 
