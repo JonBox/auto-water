@@ -11,7 +11,7 @@ class raspi(hardware):
         self.i2c = busio.I2C(board.SCL, board.SDA)  # uses board.SCL and board.SDA
         self.ads = ads1115.ADS1115(self.i2c)
         self.chan = AnalogIn(self.ads, ADS.Pin.A0)
-        self.output = OutputDevice(5, active_high=True)
+        self.output = OutputDevice(4, active_high=True)
     def get_analog_input(self):
         return self.chan.value, self.chan.voltage
     def turn_digital_output_on(self):
