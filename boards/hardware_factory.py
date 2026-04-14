@@ -1,5 +1,10 @@
+import os
+
 
 def get_board():
+    if os.environ['board'] == "mock":
+        from boards.mockBoard import mockBoard
+        return mockBoard()
     try:
         from boards.ft232 import ft232
         return ft232()
