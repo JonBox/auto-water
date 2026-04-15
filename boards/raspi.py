@@ -15,9 +15,9 @@ class raspi(hardware):
         self.chan2 = AnalogIn(self.ads, ADS.Pin.A2)
         self.output = OutputDevice(4, active_high=True)
     def get_analog_input(self):
-        return (self.chan0.value, self.chan0.voltage
-                    ,self.chan1.value, self.chan1.voltage,
-                self.chan2.value, self.chan2.voltage)
+        return {'sensor1': self.chan0.voltage,
+                'sensor2': self.chan1.voltage,
+                'sensor3': self.chan2.voltage }
     def turn_digital_output_on(self):
         self.output.on()
     def turn_digital_output_off(self):

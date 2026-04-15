@@ -13,7 +13,7 @@ class ft232(hardware):
         self.digital = digitalio.DigitalInOut(board.C0)
         self.digital.direction = digitalio.Direction.OUTPUT
     def get_analog_input(self):
-        return self.chan.value, self.chan.voltage
+        return { 'sensor1':  self.chan.voltage }
     def turn_digital_output_on(self):
         self.digital.value = True
     def turn_digital_output_off(self):

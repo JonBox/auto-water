@@ -43,8 +43,8 @@ def status_recorder():
     return static_file(history.chart_data(), root=".", mimetype="image/png")
 
 def write_status_to_file():
-    (moisture_value, moisture_voltage) = moisture.get_moisture_level()
-    history.write_status_to_file(water.is_on(), moisture_value, moisture_voltage)
+    moisture_readings = moisture.get_moisture_level()
+    history.write_status_to_file(water.is_on(), moisture_readings)
 
 if __name__ == "__main__":
     start_background_task()
