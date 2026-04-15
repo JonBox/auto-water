@@ -2,7 +2,7 @@ import os
 
 
 def get_board():
-    if os.environ['board'] == "mock":
+    if os.environ.get('board') == "mock":
         from boards.mockBoard import mockBoard
         return mockBoard()
     try:
