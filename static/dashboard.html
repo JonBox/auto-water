@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Irrigation Control</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --water: #2f81f7;
+    --water-glow: rgba(47,129,247,0.25);
+    --off: #3d4450;
+    --green: #3fb950;
+    --amber: #d29922;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --danger: #f85149;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  header h1 span { color: var(--water); }
+
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  .status-dot.on {
+    background: var(--water);
+    box-shadow: 0 0 10px var(--water-glow), 0 0 20px var(--water-glow);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .row {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    flex: 1 1 200px;
+  }
+
+  .card-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  /* Water toggle */
+  .water-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex: 1 1 260px;
+  }
+
+  .water-status {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .water-label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    transition: color 0.3s;
+  }
+
+  .water-label.on { color: var(--water); }
+  .water-label.off { color: var(--muted); }
+
+  .toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    border-radius: 7px;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  .toggle-btn:active { transform: scale(0.97); }
+
+  .toggle-btn.turn-on {
+    background: var(--water);
+    color: #fff;
+    box-shadow: 0 0 16px var(--water-glow);
+  }
+
+  .toggle-btn.turn-off {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  .toggle-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Soil moisture sensors */
+  .sensor-card { flex: 1 1 140px; }
+
+  .moisture-bar-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+  }
+
+  .moisture-bar {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--green);
+    transition: width 0.6s ease;
+  }
+
+  .moisture-val {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 0.1rem;
+    transition: color 0.3s;
+  }
+
+  .moisture-sub {
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  /* Chart */
+  .chart-card {
+    flex: 1 1 100%;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: clamp(200px, 35vw, 300px);
+  }
+
+  /* Last updated */
+  .last-updated {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: right;
+    margin-top: -0.5rem;
+  }
+
+  .error-toast {
+    display: none;
+    background: rgba(248,81,73,0.12);
+    border: 1px solid var(--danger);
+    border-radius: 7px;
+    padding: 0.65rem 1rem;
+    color: var(--danger);
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="status-dot" id="statusDot"></div>
+  <h1>Irrigation <span>Control</span></h1>
+</header>
+
+<div class="layout">
+
+  <div class="error-toast" id="errorToast"></div>
+
+  <div class="row">
+    <!-- Water Toggle -->
+    <div class="card water-card">
+      <div class="card-label">Water</div>
+      <div class="water-status">
+        <div class="status-dot" id="waterDot"></div>
+        <div class="water-label off" id="waterLabel">—</div>
+      </div>
+      <button class="toggle-btn turn-on" id="toggleBtn" onclick="toggleWater()" disabled>
+        Loading…
+      </button>
+    </div>
+
+    <!-- Sensor 1 -->
+    <div class="card sensor-card">
+      <div class="card-label">Sensor 1</div>
+      <div class="moisture-val" id="s1val">—</div>
+      <div class="moisture-sub">soil moisture</div>
+      <div class="moisture-bar-wrap"><div class="moisture-bar" id="s1bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- Sensor 2 -->
+    <div class="card sensor-card">
+      <div class="card-label">Sensor 2</div>
+      <div class="moisture-val" id="s2val">—</div>
+      <div class="moisture-sub">soil moisture</div>
+      <div class="moisture-bar-wrap"><div class="moisture-bar" id="s2bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- Sensor 3 -->
+    <div class="card sensor-card">
+      <div class="card-label">Sensor 3</div>
+      <div class="moisture-val" id="s3val">—</div>
+      <div class="moisture-sub">soil moisture</div>
+      <div class="moisture-bar-wrap"><div class="moisture-bar" id="s3bar" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card chart-card">
+    <div class="card-label">Soil Moisture History</div>
+    <div class="chart-wrap">
+      <canvas id="moistureChart"></canvas>
+    </div>
+  </div>
+
+  <div class="last-updated" id="lastUpdated"></div>
+
+</div>
+
+<script>
+  let waterOn = false;
+  let chart = null;
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+
+  function showError(msg) {
+    const el = document.getElementById('errorToast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
+  function pct(v) { return Math.min(100, Math.max(0, v * 100)).toFixed(0) + '%'; }
+
+  function moistureColor(v) {
+    if (v > 0.5) return '#2f81f7';
+    if (v > 0.25) return '#3fb950';
+    return '#d29922';
+  }
+
+  // ── Status ─────────────────────────────────────────────────────────────────
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch('/api/status');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      applyStatus(d);
+    } catch (e) {
+      showError('Could not fetch /status — ' + e.message);
+    }
+  }
+
+  function applyStatus(d) {
+    waterOn = !!d.water_on;
+
+    // Header dot
+    const hDot = document.getElementById('statusDot');
+    hDot.classList.toggle('on', waterOn);
+
+    // Water dot + label
+    const wDot = document.getElementById('waterDot');
+    const wLbl = document.getElementById('waterLabel');
+    wDot.classList.toggle('on', waterOn);
+    wLbl.textContent = waterOn ? 'ON' : 'OFF';
+    wLbl.className = 'water-label ' + (waterOn ? 'on' : 'off');
+
+    // Button
+    const btn = document.getElementById('toggleBtn');
+    btn.disabled = false;
+    if (waterOn) {
+      btn.textContent = '⏹ Turn Water Off';
+      btn.className = 'toggle-btn turn-off';
+    } else {
+      btn.textContent = '▶ Turn Water On';
+      btn.className = 'toggle-btn turn-on';
+    }
+
+    // Sensors
+    const sm = d.soil_moisture || {};
+    setSensor('s1', sm.sensor1);
+    setSensor('s2', sm.sensor2);
+    setSensor('s3', sm.sensor3);
+
+    document.getElementById('lastUpdated').textContent =
+      'Last updated: ' + new Date().toLocaleTimeString();
+  }
+
+  function setSensor(id, v) {
+    if (v == null) return;
+    const val = document.getElementById(id + 'val');
+    const bar = document.getElementById(id + 'bar');
+    val.textContent = (v * 100).toFixed(1) + '%';
+    val.style.color = moistureColor(v);
+    bar.style.width = pct(v);
+    bar.style.background = moistureColor(v);
+  }
+
+  // ── Toggle ─────────────────────────────────────────────────────────────────
+
+  async function toggleWater() {
+    const btn = document.getElementById('toggleBtn');
+    btn.disabled = true;
+    const endpoint = waterOn ? '/api/water_off' : '/api/water_on';
+    try {
+      const res = await fetch(endpoint);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      await fetchStatus();
+    } catch (e) {
+      showError('Request to ' + endpoint + ' failed — ' + e.message);
+      btn.disabled = false;
+    }
+  }
+
+  // ── History Chart ──────────────────────────────────────────────────────────
+
+  function parseHistory(text) {
+    // Format: |timestamp| True/False/0/1 [sensor1] [sensor2] [sensor3]
+    // Sensor count may vary per row; skip rows with no valid sensor readings.
+    const entries = [];
+    // Split on pipe-delimited timestamps, capturing each block
+    const re = /\|([^|]+)\|\s*([^\|]+?)(?=\s*\||$)/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const dt = new Date(m[1].trim());
+      if (isNaN(dt)) continue;
+      const label = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      // Tokenise the data portion — skip the water on/off token (True/False/0/1)
+      const tokens = m[2].trim().split(/\s+/);
+      // First token is water state
+      const sensorTokens = tokens.slice(1).map(Number).filter(v => !isNaN(v) && v >= 0 && v <= 1);
+      if (sensorTokens.length === 0) continue;
+
+      entries.push({
+        label,
+        s1: sensorTokens[0] ?? null,
+        s2: sensorTokens[1] ?? null,
+        s3: sensorTokens[2] ?? null,
+      });
+    }
+    return entries;
+  }
+
+  async function fetchHistory() {
+    try {
+      const res = await fetch('/api/status_history');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const data = parseHistory(text);
+      renderChart(data);
+    } catch (e) {
+      showError('Could not fetch /status_history — ' + e.message);
+    }
+  }
+
+  function renderChart(data) {
+    const labels = data.map(d => d.label);
+    const toVal = v => v != null ? +(v * 100).toFixed(2) : null;
+    const s1 = data.map(d => toVal(d.s1));
+    const s2 = data.map(d => toVal(d.s2));
+    const s3 = data.map(d => toVal(d.s3));
+
+    const cfg = {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Sensor 1', data: s1, borderColor: '#2f81f7', backgroundColor: 'rgba(47,129,247,0.08)', tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2 },
+          { label: 'Sensor 2', data: s2, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.08)',  tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2 },
+          { label: 'Sensor 3', data: s3, borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,0.08)', tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2 },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: '#8b949e', font: { family: 'DM Mono', size: 11 }, boxWidth: 12, padding: 16 }
+          },
+          tooltip: {
+            backgroundColor: '#161b22',
+            borderColor: '#30363d',
+            borderWidth: 1,
+            titleColor: '#e6edf3',
+            bodyColor: '#8b949e',
+            titleFont: { family: 'DM Mono' },
+            bodyFont: { family: 'DM Mono', size: 11 },
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 8 },
+            grid: { color: 'rgba(48,54,61,0.6)' }
+          },
+          y: {
+            ticks: {
+              color: '#8b949e',
+              font: { family: 'DM Mono', size: 10 },
+              callback: v => v.toFixed(0) + '%'
+            },
+            grid: { color: 'rgba(48,54,61,0.6)' },
+            title: { display: true, text: 'Moisture %', color: '#8b949e', font: { family: 'DM Mono', size: 10 } }
+          }
+        }
+      }
+    };
+
+    if (chart) {
+      chart.data = cfg.data;
+      chart.update('none');
+    } else {
+      chart = new Chart(document.getElementById('moistureChart'), cfg);
+    }
+  }
+
+  // ── Init & polling ─────────────────────────────────────────────────────────
+
+  async function init() {
+    await fetchStatus();
+    await fetchHistory();
+    setInterval(fetchStatus, 10000);
+    setInterval(fetchHistory, 30000);
+  }
+
+  init();
+</script>
+</body>
+</html>

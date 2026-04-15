@@ -22,25 +22,25 @@ def start_background_task():
     thread.start()
 
 
-@app.route('/water_on')
+@app.route('/api/water_on')
 def water_on():
     water.turn_on()
 
-@app.route("/water_off")
+@app.route("/api/water_off")
 def water_off():
     water.turn_off()
 
-@app.route("/status")
+@app.route("/api/status")
 def status():
     return {"water_on": water.is_on(), "soil_moisture": moisture.get_moisture_level()}
 
-@app.route("/status_history")
+@app.route("/api/status_history")
 def status_history():
     return history.read_status_from_file()
 
-@app.route("/history_chart")
-def status_recorder():
-    return static_file(history.chart_data(), root=".", mimetype="image/png")
+@app.route('/dashboard.html')
+def server_static():
+    return static_file("dashboard.html", root='static')
 
 def write_status_to_file():
     moisture_readings = moisture.get_moisture_level()
