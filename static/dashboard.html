@@ -311,7 +311,7 @@
       const d = await res.json();
       applyStatus(d);
     } catch (e) {
-      showError('Could not fetch /status — ' + e.message);
+      showError('Could not fetch /api/status — ' + e.message);
     }
   }
 
@@ -336,7 +336,7 @@
       btn.textContent = '⏹ Turn Water Off';
       btn.className = 'toggle-btn turn-off';
     } else {
-      btn.textContent = '▶ Turn Water On';
+      btn.textContent = '▶ Water for 15 Minutes';
       btn.className = 'toggle-btn turn-on';
     }
 
@@ -379,25 +379,31 @@
   // ── History Chart ──────────────────────────────────────────────────────────
 
   function parseHistory(text) {
-    // Format: |timestamp| True/False/0/1 [sensor1] [sensor2] [sensor3]
-    // Sensor count may vary per row; skip rows with no valid sensor readings.
+    // Format: |timestamp (UTC)| True/False/0/1 [sensor1] [sensor2] [sensor3]
+    // Timestamps arrive as UTC — append 'Z' so JS Date parses them correctly,
+    // then toLocaleTimeString() converts to the browser's local timezone automatically.
     const entries = [];
-    // Split on pipe-delimited timestamps, capturing each block
     const re = /\|([^|]+)\|\s*([^\|]+?)(?=\s*\||$)/g;
     let m;
     while ((m = re.exec(text)) !== null) {
-      const dt = new Date(m[1].trim());
+      // Normalise to ISO-8601 UTC: replace space with T, add Z suffix
+      const raw = m[1].trim();
+      const dt = new Date(raw);
       if (isNaN(dt)) continue;
+      // Label is now in the user's local timezone
       const label = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      // Tokenise the data portion — skip the water on/off token (True/False/0/1)
       const tokens = m[2].trim().split(/\s+/);
-      // First token is water state
+      // First token is water state (True/False/1/0)
+      const waterTok = tokens[0].toLowerCase();
+      const water = (waterTok === 'true' || waterTok === '1') ? 1 : 0;
+
       const sensorTokens = tokens.slice(1).map(Number).filter(v => !isNaN(v) && v >= 0 && v <= 1);
       if (sensorTokens.length === 0) continue;
 
       entries.push({
         label,
+        water,
         s1: sensorTokens[0] ?? null,
         s2: sensorTokens[1] ?? null,
         s3: sensorTokens[2] ?? null,
@@ -414,25 +420,57 @@
       const data = parseHistory(text);
       renderChart(data);
     } catch (e) {
-      showError('Could not fetch /status_history — ' + e.message);
+      showError('Could not fetch /api/status_history — ' + e.message);
     }
   }
 
   function renderChart(data) {
-    const labels = data.map(d => d.label);
-    const toVal = v => v != null ? +(v * 100).toFixed(2) : null;
-    const s1 = data.map(d => toVal(d.s1));
-    const s2 = data.map(d => toVal(d.s2));
-    const s3 = data.map(d => toVal(d.s3));
+    const labels   = data.map(d => d.label);
+    const toVal    = v => v != null ? +(v * 100).toFixed(2) : null;
+    const s1       = data.map(d => toVal(d.s1));
+    const s2       = data.map(d => toVal(d.s2));
+    const s3       = data.map(d => toVal(d.s3));
+    const waterLine = data.map(d => d.water); // 0 or 1, plotted on its own y-axis
 
     const cfg = {
       type: 'line',
       data: {
         labels,
         datasets: [
-          { label: 'Sensor 1', data: s1, borderColor: '#2f81f7', backgroundColor: 'rgba(47,129,247,0.08)', tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2 },
-          { label: 'Sensor 2', data: s2, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.08)',  tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2 },
-          { label: 'Sensor 3', data: s3, borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,0.08)', tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2 },
+          {
+            label: 'Sensor 1',
+            data: s1,
+            borderColor: '#2f81f7', backgroundColor: 'rgba(47,129,247,0.08)',
+            tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
+            yAxisID: 'yMoisture',
+          },
+          {
+            label: 'Sensor 2',
+            data: s2,
+            borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.08)',
+            tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
+            yAxisID: 'yMoisture',
+          },
+          {
+            label: 'Sensor 3',
+            data: s3,
+            borderColor: '#d29922', backgroundColor: 'rgba(210,153,34,0.08)',
+            tension: 0.35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2,
+            yAxisID: 'yMoisture',
+          },
+          {
+            label: 'Water',
+            data: waterLine,
+            borderColor: 'rgba(120,180,255,0.7)',
+            backgroundColor: 'rgba(47,129,247,0.12)',
+            fill: true,
+            stepped: 'before',   // square step — water is either on or off
+            pointRadius: 0,
+            borderWidth: 1.5,
+            borderDash: [4, 3],
+            yAxisID: 'yWater',
+            spanGaps: true,
+          },
         ]
       },
       options: {
@@ -451,7 +489,14 @@
             bodyColor: '#8b949e',
             titleFont: { family: 'DM Mono' },
             bodyFont: { family: 'DM Mono', size: 11 },
-            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` }
+            callbacks: {
+              label: ctx => {
+                if (ctx.dataset.yAxisID === 'yWater') {
+                  return ` Water: ${ctx.parsed.y ? 'ON' : 'OFF'}`;
+                }
+                return ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) + '%' : '—'}`;
+              }
+            }
           }
         },
         scales: {
@@ -459,7 +504,8 @@
             ticks: { color: '#8b949e', font: { family: 'DM Mono', size: 10 }, maxTicksLimit: 8 },
             grid: { color: 'rgba(48,54,61,0.6)' }
           },
-          y: {
+          yMoisture: {
+            position: 'left',
             ticks: {
               color: '#8b949e',
               font: { family: 'DM Mono', size: 10 },
@@ -467,6 +513,18 @@
             },
             grid: { color: 'rgba(48,54,61,0.6)' },
             title: { display: true, text: 'Moisture %', color: '#8b949e', font: { family: 'DM Mono', size: 10 } }
+          },
+          yWater: {
+            position: 'right',
+            min: 0, max: 1,
+            ticks: {
+              color: 'rgba(120,180,255,0.6)',
+              font: { family: 'DM Mono', size: 10 },
+              stepSize: 1,
+              callback: v => v === 1 ? 'ON' : v === 0 ? 'OFF' : ''
+            },
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Water', color: 'rgba(120,180,255,0.6)', font: { family: 'DM Mono', size: 10 } }
           }
         }
       }
@@ -474,6 +532,7 @@
 
     if (chart) {
       chart.data = cfg.data;
+      chart.options = cfg.options;
       chart.update('none');
     } else {
       chart = new Chart(document.getElementById('moistureChart'), cfg);

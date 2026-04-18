@@ -17,10 +17,18 @@ def status_recorder_loop():
         write_status_to_file()
         time.sleep(60)
 
-def start_background_task():
+def water_timer_loop():
+    while True:
+        water.auto_off()
+        time.sleep(5)
+
+def start_status_recorder():
     thread = threading.Thread(target=status_recorder_loop, daemon=True)
     thread.start()
 
+def start_water_timer():
+    thread = threading.Thread(target=water_timer_loop, daemon=True)
+    thread.start()
 
 @app.route('/api/water_on')
 def water_on():
@@ -47,5 +55,6 @@ def write_status_to_file():
     history.write_status_to_file(water.is_on(), moisture_readings)
 
 if __name__ == "__main__":
-    start_background_task()
+    start_status_recorder()
+    start_water_timer()
     app.run(host='0.0.0.0', port=8080, debug=True)
