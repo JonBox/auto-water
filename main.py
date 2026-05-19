@@ -30,9 +30,10 @@ def start_water_timer():
     thread = threading.Thread(target=water_timer_loop, daemon=True)
     thread.start()
 
-@app.route('/api/water_on')
-def water_on():
-    water.turn_on()
+@app.route('/api/water_on/<minutes>')
+def water_on(minutes = None):
+    minutes = minutes or 15
+    water.turn_on(minutes * 60)
 
 @app.route("/api/water_off")
 def water_off():
