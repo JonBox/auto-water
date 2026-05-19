@@ -33,4 +33,5 @@ class history:
     def read_status_from_file(self):
         status_file = open(self.filename, "r")
         lines_to_read = 60*24*7 # seven days
-        return (status_file.readlines [-lines_to_read:])
+        lines = status_file.readlines()
+        return ( lines[-lines_to_read:])

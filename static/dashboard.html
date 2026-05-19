@@ -365,7 +365,7 @@
   async function toggleWater() {
     const btn = document.getElementById('toggleBtn');
     btn.disabled = true;
-    const endpoint = waterOn ? '/api/water_off' : '/api/water_on';
+    const endpoint = waterOn ? '/api/water_off' : '/api/water_on/15';
     try {
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error('HTTP ' + res.status);
