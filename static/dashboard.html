@@ -336,7 +336,7 @@
       btn.textContent = '⏹ Turn Water Off';
       btn.className = 'toggle-btn turn-off';
     } else {
-      btn.textContent = '▶ Water for 15 Minutes';
+      btn.textContent = '▶ Water for 30 Minutes';
       btn.className = 'toggle-btn turn-on';
     }
 
@@ -365,7 +365,7 @@
   async function toggleWater() {
     const btn = document.getElementById('toggleBtn');
     btn.disabled = true;
-    const endpoint = waterOn ? '/api/water_off' : '/api/water_on/15';
+    const endpoint = waterOn ? '/api/water_off' : '/api/water_on/30';
     try {
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error('HTTP ' + res.status);
